@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 
 // Create or connect to SQLite database
-const dbPath = path.resolve(__dirname, '../../database.sqlite');
+const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database.sqlite');
 const db = new Database(dbPath);
 
 // Initialize schema

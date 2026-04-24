@@ -61,21 +61,21 @@ The server continuously monitors the distance between all players.
 
 ## 4. DETAILED FEATURE SET
 
-### 🌍 Immersive Office Map
+### Immersive Office Map
 - **Sector Awareness**: The system detects which island you are on (Dev Area, Kitchen, Lounge) and updates your HUD status.
 - **Cosmic Aesthetics**: Animated star fields, parallax background layers, and glowing interaction markers.
 
-### ⚡ Interactive Hardware Layer
+### Interactive Hardware Layer
 - **Object Interaction**: Proximity-aware points (Workstations, Coffee Machines) that respond to the `[E]` key.
 - **Visual Feedback**: Real-time "SUCCESS" notifications and floating labels for clear UX.
 
-### 🛡️ Resilience & Performance
+### Resilience & Performance
 - **Error Shielding**: The render loop is wrapped in safety guards to prevent "Blank Screen" crashes during network hiccups.
 - **Asset Fallbacks**: If an avatar image fails to load, the system instantly renders a high-contrast colored profile circle.
 
 ---
 
-## 🚀 FUTURE ROADMAP
+##  FUTURE ROADMAP
 
 - [ ] **Voice Chat**: Real-time audio based on spatial proximity.
 - [ ] **Screen Sharing**: Walk up to a "Projector" to share your screen with anyone nearby.
@@ -84,7 +84,7 @@ The server continuously monitors the distance between all players.
 
 ---
 
-## 🛠️ INSTALLATION
+##  INSTALLATION
 
 ```bash
 # Clone the repo
