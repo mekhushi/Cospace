@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "cd Cospace/server && npm install && npm run build"
+  },
+  "deploy": {
+    "startCommand": "cd Cospace/server && npm start"
+  }
+}
