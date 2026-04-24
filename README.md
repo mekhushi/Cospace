@@ -2,7 +2,7 @@
 
 CoSpace is a high-performance, real-time spatial environment designed to bridge the gap between remote work flexibility and physical office presence. Built with **PixiJS v8** and **Socket.io**, it provides a seamless 2D experience where teams can "be together" without the exhaustion of video calls.
 
-![Cospace]("C:\Users\Khushi Singh\Desktop\CoSpace\assets\img.png")
+![Cospace](assets/img.png)
 
 ## 1. THE CHALLENGE & THE VISION
 
