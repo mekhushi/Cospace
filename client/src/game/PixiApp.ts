@@ -84,7 +84,7 @@ export class PixiApp {
       this.roomsLayer.addChild(cityBg);
     } catch (e) { console.warn('City BG fail'); }
 
-    await this.drawOfficeRooms();
+    this.drawOfficeRooms(); // Don't await, let it load in background
 
     // Ticker & Listeners
     this.app.ticker.add((ticker) => {

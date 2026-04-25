@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { Send, Users, MessageSquare } from 'lucide-react';
 import { socket } from '../network/socket';
@@ -35,7 +36,10 @@ export const ProximityChat: React.FC = () => {
   }
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, x: 20, scale: 0.95 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 20, scale: 0.95 }}
       className="fixed right-6 bottom-6 w-80 h-[450px] glass-panel rounded-2xl flex flex-col overflow-hidden z-40 border-l-4 border-blue-500 shadow-2xl"
     >
       {/* Header */}
@@ -141,6 +145,6 @@ export const ProximityChat: React.FC = () => {
           </button>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { LogIn, UserPlus, Loader2, Check, RefreshCw } from 'lucide-react';
 
@@ -134,11 +134,17 @@ export const AuthOverlay: React.FC = () => {
             )}
           </div>
 
-          {error && (
-            <div className="text-red-500 text-[10px] font-black uppercase bg-red-500/5 p-3 border border-red-500/10 text-center">
-              System Error: {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-red-500 text-[10px] font-black uppercase bg-red-500/5 p-3 border border-red-500/10 text-center"
+              >
+                System Error: {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="flex flex-col items-center gap-6">
             <button
