@@ -3,6 +3,8 @@ import * as PIXI from 'pixi.js';
 export class PlayerSprite extends PIXI.Container {
   private avatarSprite: PIXI.Sprite | null = null;
   private glowRing: PIXI.Graphics | null = null;
+  private speechBubble: PIXI.Container | null = null;
+  private speechTimeout: any = null;
   private nameTag: PIXI.Text;
   private avatarUrl: string;
   
@@ -103,5 +105,57 @@ export class PlayerSprite extends PIXI.Container {
     if (this.glowRing) {
       this.glowRing.scale.set(1 + Math.sin(Date.now() / 300) * 0.1);
     }
+  }
+
+  public showSpeechBubble(text: string) {
+    if (this.speechBubble) {
+      this.removeChild(this.speechBubble);
+      if (this.speechTimeout) clearTimeout(this.speechTimeout);
+    }
+
+    this.speechBubble = new PIXI.Container();
+    this.speechBubble.y = -90; // Above name tag
+
+    const style = new PIXI.TextStyle({
+      fontFamily: 'monospace',
+      fontSize: 12,
+      fontWeight: 'bold',
+      fill: '#ffffff',
+      wordWrap: true,
+      wordWrapWidth: 150,
+      align: 'center'
+    });
+
+    const msgText = new PIXI.Text({ text, style });
+    msgText.anchor.set(0.5, 1);
+
+    const padding = 10;
+    const bg = new PIXI.Graphics();
+    bg.fill({ color: 0x000000, alpha: 0.8 });
+    bg.setStrokeStyle({ width: 2, color: 0x3b82f6 });
+    bg.roundRect(
+      -msgText.width / 2 - padding, 
+      -msgText.height - padding, 
+      msgText.width + padding * 2, 
+      msgText.height + padding * 2, 
+      8
+    );
+    bg.fill();
+    bg.stroke();
+
+    // Small triangle at bottom
+    bg.poly([-8, 0, 8, 0, 0, 8]);
+    bg.fill();
+
+    this.speechBubble.addChild(bg);
+    this.speechBubble.addChild(msgText);
+    this.addChild(this.speechBubble);
+
+    this.speechTimeout = setTimeout(() => {
+      if (this.speechBubble) {
+        this.removeChild(this.speechBubble);
+        this.speechBubble = null;
+      }
+    }, 5000);
   }
 }

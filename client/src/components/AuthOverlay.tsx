@@ -122,6 +122,10 @@ export const AuthOverlay: React.FC = () => {
                 </div>
                 <button 
                   type="button"
+                  onClick={() => {
+                    const randomAvatar = AVATAR_IMAGES[Math.floor(Math.random() * AVATAR_IMAGES.length)];
+                    setSelectedAvatar(randomAvatar);
+                  }}
                   className="mt-4 flex items-center gap-2 text-[9px] font-black text-slate-600 hover:text-white uppercase tracking-widest transition-colors"
                 >
                   <RefreshCw className="w-3 h-3" /> Randomize Options
@@ -130,17 +134,11 @@ export const AuthOverlay: React.FC = () => {
             )}
           </div>
 
-          <AnimatePresence>
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-red-500 text-[10px] font-black uppercase bg-red-500/5 p-3 border border-red-500/10 text-center"
-              >
-                System Error: {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {error && (
+            <div className="text-red-500 text-[10px] font-black uppercase bg-red-500/5 p-3 border border-red-500/10 text-center">
+              System Error: {error}
+            </div>
+          )}
 
           <div className="flex flex-col items-center gap-6">
             <button

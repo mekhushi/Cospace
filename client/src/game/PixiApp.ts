@@ -31,12 +31,11 @@ export class PixiApp {
     this.roomsLayer = new PIXI.Container();
     this.markersLayer = new PIXI.Container();
     this.playersLayer = new PIXI.Container();
-    this.init(canvas);
   }
 
-  private async init(canvas: HTMLCanvasElement) {
+  public async init(canvas: HTMLCanvasElement) {
     await this.app.init({
-      view: canvas,
+      canvas: canvas,
       width: window.innerWidth,
       height: window.innerHeight,
       backgroundColor: 0x000000,
@@ -88,12 +87,17 @@ export class PixiApp {
     await this.drawOfficeRooms();
 
     // Ticker & Listeners
-    this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
+    this.app.ticker.add((ticker) => {
+      try {
+        this.update(ticker.deltaTime);
+      } catch (err) {
+        console.error('Pixi Tick Error:', err);
+      }
+    });
+
     window.addEventListener('keydown', (e) => this.keys.add(e.key.toLowerCase()));
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     window.addEventListener('resize', () => this.resize());
-
-    this.setupSocketListeners();
   }
 
   private async drawOfficeRooms() {
@@ -117,39 +121,118 @@ export class PixiApp {
     }
   }
 
-  private setupSocketListeners() {
+  public setupSocketListeners() {
+    // Clear existing to avoid dupes
+    socket.off('current_players');
+    socket.off('player_joined');
+    socket.off('players_update');
+    socket.off('player_left');
+    socket.off('proximity_enter');
+    socket.off('proximity_leave');
+    socket.off('chat_message');
+
     socket.on('current_players', (players: any[]) => {
-      useAppStore.getState().setOnlineCount(players.length);
-      players.forEach(p => { if (p.id !== socket.id) this.addRemotePlayer(p); });
+      try {
+        console.log('Received current_players:', players?.length);
+        if (!Array.isArray(players)) return;
+        useAppStore.getState().setOnlineCount(players.length);
+        players.forEach(p => { 
+          if (p && p.id && p.id !== socket.id) {
+            console.log('Adding remote player from current_players:', p.username);
+            this.addRemotePlayer(p); 
+          }
+        });
+      } catch (err) { console.error('Error in current_players:', err); }
     });
+
     socket.on('player_joined', (p: any) => {
-      useAppStore.getState().setOnlineCount(useAppStore.getState().onlineCount + 1);
-      this.addRemotePlayer(p);
+      try {
+        console.log('Player joined:', p?.username);
+        if (!p || !p.id || p.id === socket.id) return;
+        useAppStore.getState().setOnlineCount(useAppStore.getState().onlineCount + 1);
+        this.addRemotePlayer(p);
+      } catch (err) { console.error('Error in player_joined:', err); }
     });
+
     socket.on('players_update', (players: any[]) => {
-      players.forEach(p => {
-        if (p.id === socket.id) return;
-        const sprite = this.remotePlayers.get(p.id);
-        if (sprite) sprite.updatePosition(p.x, p.y);
-      });
+      try {
+        if (!Array.isArray(players)) return;
+        players.forEach(p => {
+          if (!p || !p.id || p.id === socket.id) return;
+          const sprite = this.remotePlayers.get(p.id);
+          if (sprite) sprite.updatePosition(p.x, p.y);
+        });
+      } catch (err) { console.error('Error in players_update:', err); }
     });
+
     socket.on('player_left', (id: string) => {
-      const sprite = this.remotePlayers.get(id);
-      if (sprite) {
-        this.playersLayer.removeChild(sprite);
-        this.remotePlayers.delete(id);
-      }
+      try {
+        console.log('Player left:', id);
+        const sprite = this.remotePlayers.get(id);
+        if (sprite) {
+          this.playersLayer.removeChild(sprite);
+          this.remotePlayers.delete(id);
+          useAppStore.getState().setOnlineCount(Math.max(0, useAppStore.getState().onlineCount - 1));
+        }
+      } catch (err) { console.error('Error in player_left:', err); }
     });
+
     socket.on('proximity_enter', (data: any) => {
-      useAppStore.getState().setActiveRoom(data.roomId);
-      useAppStore.getState().addPeerToRoom(data.peer);
+      try {
+        console.log('Proximity Group Enter:', data?.roomId, data?.peers?.length);
+        if (data && data.roomId) {
+          useAppStore.getState().setActiveRoom(data.roomId);
+          if (data.peers) {
+            useAppStore.getState().setPeersInRoom(data.peers);
+          }
+        }
+      } catch (err) { console.error('Error in proximity_enter:', err); }
     });
+
+    socket.on('peer_joined_room', (data: any) => {
+      try {
+        console.log('Peer joined proximity room:', data?.peer?.username);
+        if (data && data.peer) {
+          useAppStore.getState().addPeerToRoom(data.peer);
+        }
+      } catch (err) { console.error('Error in peer_joined_room:', err); }
+    });
+
+    socket.on('peer_left_room', (data: any) => {
+      try {
+        console.log('Peer left proximity room:', data?.playerId);
+        if (data && data.playerId) {
+          useAppStore.getState().removePeerFromRoom(data.playerId);
+        }
+      } catch (err) { console.error('Error in peer_left_room:', err); }
+    });
+
     socket.on('proximity_leave', () => {
-      useAppStore.getState().setActiveRoom(null);
-      setTimeout(() => useAppStore.getState().clearChat(), 500);
+      try {
+        console.log('Proximity Leave');
+        useAppStore.getState().setActiveRoom(null);
+        setTimeout(() => {
+          try {
+            useAppStore.getState().clearChat();
+          } catch (e) {}
+        }, 500);
+      } catch (err) { console.error('Error in proximity_leave:', err); }
     });
+
     socket.on('chat_message', (msg: any) => {
-      useAppStore.getState().addChatMessage(msg);
+      try {
+        if (msg) {
+          useAppStore.getState().addChatMessage(msg);
+          
+          // Show speech bubble over head
+          if (msg.senderId === socket.id) {
+            if (this.localPlayer) this.localPlayer.showSpeechBubble(msg.text);
+          } else {
+            const remote = this.remotePlayers.get(msg.senderId);
+            if (remote) remote.showSpeechBubble(msg.text);
+          }
+        }
+      } catch (err) { console.error('Error in chat_message:', err); }
     });
   }
 
@@ -179,11 +262,16 @@ export class PixiApp {
   private update(delta: number) {
     if (!this.localPlayer) return;
 
+    // Don't move if typing in any input field
+    const isTyping = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+
     let moved = false;
-    if (this.keys.has('w') || this.keys.has('arrowup')) { this.localPlayer.targetY -= this.speed * delta; moved = true; }
-    if (this.keys.has('s') || this.keys.has('arrowdown')) { this.localPlayer.targetY += this.speed * delta; moved = true; }
-    if (this.keys.has('a') || this.keys.has('arrowleft')) { this.localPlayer.targetX -= this.speed * delta; moved = true; }
-    if (this.keys.has('d') || this.keys.has('arrowright')) { this.localPlayer.targetX += this.speed * delta; moved = true; }
+    if (!isTyping) {
+      if (this.keys.has('w') || this.keys.has('arrowup')) { this.localPlayer.targetY -= this.speed * delta; moved = true; }
+      if (this.keys.has('s') || this.keys.has('arrowdown')) { this.localPlayer.targetY += this.speed * delta; moved = true; }
+      if (this.keys.has('a') || this.keys.has('arrowleft')) { this.localPlayer.targetX -= this.speed * delta; moved = true; }
+      if (this.keys.has('d') || this.keys.has('arrowright')) { this.localPlayer.targetX += this.speed * delta; moved = true; }
+    }
 
     this.localPlayer.tick(delta);
     this.remotePlayers.forEach(p => p.tick(delta));
@@ -248,5 +336,11 @@ export class PixiApp {
   }
 
   private resize() { this.app.renderer.resize(window.innerWidth, window.innerHeight); }
-  public destroy() { this.app.destroy(true, { children: true, texture: true }); }
+  public destroy() {
+    try {
+      this.app.destroy({ removeView: true, children: true });
+    } catch (e) {
+      console.warn('Destroy error:', e);
+    }
+  }
 }

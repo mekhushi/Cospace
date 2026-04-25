@@ -5,9 +5,13 @@ import { Send, Users, MessageSquare } from 'lucide-react';
 import { socket } from '../network/socket';
 
 export const ProximityChat: React.FC = () => {
-  const { activeRoomId, peersInRoom, chatMessages } = useAppStore();
+  const { activeRoomId, peersInRoom, chatMessages, currentZoneName } = useAppStore();
   const [inputText, setInputText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    console.log('ProximityChat State:', { activeRoomId, peerCount: peersInRoom?.length });
+  }, [activeRoomId, peersInRoom]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -27,15 +31,12 @@ export const ProximityChat: React.FC = () => {
     setInputText('');
   };
 
-  if (!activeRoomId) return null; 
-
-  const { currentZoneName } = useAppStore();
+  if (!activeRoomId) {
+    return null;
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 20, scale: 0.95 }}
+    <div
       className="fixed right-6 bottom-6 w-80 h-[450px] glass-panel rounded-2xl flex flex-col overflow-hidden z-40 border-l-4 border-blue-500 shadow-2xl"
     >
       {/* Header */}
@@ -58,6 +59,8 @@ export const ProximityChat: React.FC = () => {
           {peersInRoom && peersInRoom.map((peer) => {
             if (!peer || !peer.username || typeof peer.username !== 'string') return null;
             
+            const peerId = peer.id || Math.random().toString();
+            
             // Generate a consistent color from username
             const colors = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
             const firstChar = peer.username[0] || '?';
@@ -65,7 +68,7 @@ export const ProximityChat: React.FC = () => {
             
             return (
               <div 
-                key={peer.id || Math.random()} 
+                key={peerId} 
                 className="w-7 h-7 rounded-full border-2 border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow-lg"
                 style={{ backgroundColor: colors[colorIdx] }}
                 title={peer.username}
@@ -92,12 +95,13 @@ export const ProximityChat: React.FC = () => {
         ) : (
           chatMessages.map((msg) => {
             if (!msg) return null;
-            const isMe = msg.senderId === socket.id;
+            const isMe = socket && socket.id ? msg.senderId === socket.id : false;
             const senderDisplayName = msg.senderName || 'Unknown User';
+            const msgId = msg.id || Math.random().toString();
 
             return (
               <div 
-                key={msg.id || Math.random()} 
+                key={msgId} 
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
               >
                 <div className="flex items-center gap-1.5 mb-1 px-1">
@@ -138,6 +142,6 @@ export const ProximityChat: React.FC = () => {
           </button>
         </div>
       </form>
-    </motion.div>
+    </div>
   );
 };

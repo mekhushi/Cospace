@@ -36,6 +36,7 @@ interface AppState {
   setInteractionPrompt: (prompt: string | null) => void;
   setInteractionMessage: (msg: string | null) => void;
   addPeerToRoom: (peer: any) => void;
+  setPeersInRoom: (peers: any[]) => void;
   removePeerFromRoom: (peerId: string) => void;
   addChatMessage: (msg: ChatMessage) => void;
   clearChat: () => void;
@@ -68,6 +69,7 @@ export const useAppStore = create<AppState>((set) => ({
         : [...state.peersInRoom, peer]
     };
   }),
+  setPeersInRoom: (peers) => set({ peersInRoom: peers }),
   removePeerFromRoom: (peerId) => set((state) => ({
     peersInRoom: state.peersInRoom.filter(p => p.id !== peerId)
   })),
