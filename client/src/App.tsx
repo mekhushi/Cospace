@@ -28,14 +28,17 @@ function App() {
   useEffect(() => {
     if (!user || !token || !canvasRef.current || pixiAppRef.current) return;
 
-    const instance = new PixiApp(canvasRef.current);
+    const instance = new PixiApp();
     pixiAppRef.current = instance;
     
     instance.setupSocketListeners();
     
     const start = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      
       try {
-        await instance.init(canvasRef.current);
+        await instance.init(canvas);
         if (pixiAppRef.current === instance) {
           socket.connect();
           instance.createLocalPlayer(user.username, user.avatar);

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { Send, Users, MessageSquare } from 'lucide-react';
 import { socket } from '../network/socket';

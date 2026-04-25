@@ -25,7 +25,7 @@ export class PixiApp {
     { x: 1400, y: 800, prompt: 'Press [E] to check Waiting List', action: 'check' },
   ];
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor() {
     this.app = new PIXI.Application();
     this.container = new PIXI.Container();
     this.roomsLayer = new PIXI.Container();
@@ -130,6 +130,8 @@ export class PixiApp {
     socket.off('proximity_enter');
     socket.off('proximity_leave');
     socket.off('chat_message');
+    socket.off('peer_joined_room');
+    socket.off('peer_left_room');
 
     socket.on('current_players', (players: any[]) => {
       try {
@@ -338,7 +340,7 @@ export class PixiApp {
   private resize() { this.app.renderer.resize(window.innerWidth, window.innerHeight); }
   public destroy() {
     try {
-      this.app.destroy({ removeView: true, children: true });
+      this.app.destroy();
     } catch (e) {
       console.warn('Destroy error:', e);
     }

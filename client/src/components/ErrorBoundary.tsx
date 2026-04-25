@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -10,44 +10,42 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null
-  };
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
 
-  public static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  public render() {
+  render() {
     if (this.state.hasError) {
       return (
-        <div className="fixed inset-0 bg-slate-900 flex items-center justify-center p-6 z-[9999]">
-          <div className="bg-black border border-red-500/50 p-8 max-w-md w-full shadow-2xl">
-            <h1 className="text-red-500 font-black text-xl mb-4 uppercase tracking-tighter">System Critical Error</h1>
-            <p className="text-slate-400 text-sm mb-6 font-mono">
-              The neural link has been severed. A component in the application crashed.
-            </p>
-            <div className="bg-red-500/10 p-4 rounded border border-red-500/20 mb-6">
-              <code className="text-red-400 text-xs break-all">
-                {this.state.error?.message}
-              </code>
-            </div>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-red-500 hover:bg-red-400 text-black font-black py-3 uppercase tracking-widest transition-colors"
-            >
-              Reboot System
-            </button>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-10 text-center">
+          <h1 className="text-4xl font-black text-red-500 mb-4 uppercase tracking-tighter">System Failure</h1>
+          <p className="text-slate-400 font-mono text-sm max-w-md mb-8">
+            An unexpected error has occurred in the VirtualCosmos core.
+          </p>
+          <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-sm mb-10 text-left w-full max-w-2xl overflow-auto">
+            <code className="text-red-400 text-xs">
+              {this.state.error?.toString()}
+            </code>
           </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-8 py-3 bg-white text-black font-black uppercase tracking-widest hover:bg-emerald-500 transition-colors"
+          >
+            Reboot System
+          </button>
         </div>
       );
     }
 
-    return this.children;
+    return this.props.children;
   }
 }
