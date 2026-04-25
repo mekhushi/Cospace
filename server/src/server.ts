@@ -14,8 +14,16 @@ const io = new Server(server, {
   }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
 app.use(express.json());
+
+// Health Check
+app.get('/', (req, res) => {
+  res.json({ status: 'active', message: 'CoSpace Server is running', timestamp: new Date() });
+});
 
 // Auth Routes
 app.post('/api/register', register);
