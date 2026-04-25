@@ -5,6 +5,16 @@ import cors from 'cors';
 import { register, login } from './controllers/auth';
 import { PlayerManager } from './socket/PlayerManager';
 
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! Shutting down...');
+  console.error(err.name, err.message, err.stack);
+});
+
+process.on('unhandledRejection', (reason: any, promise) => {
+  console.error('UNHANDLED REJECTION! Shutting down...');
+  console.error(reason?.name || 'Rejection', reason?.message || reason);
+});
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {

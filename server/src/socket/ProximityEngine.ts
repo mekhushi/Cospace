@@ -5,105 +5,164 @@ const PROXIMITY_RADIUS = 250; // pixels
 
 export class ProximityEngine {
   private io: Server;
-  private players: Map<string, Player>;
-  private activeRooms: Map<string, Set<string>> = new Map(); // RoomId -> Set of Player IDs
+  private players: Map<string, any>;
+  private activeRooms: Map<string, Set<string>> = new Map(); // RoomId -> Set of PlayerIds
+  private playerToRoom: Map<string, string> = new Map(); // PlayerId -> RoomId
 
-  constructor(io: Server, players: Map<string, Player>) {
+  constructor(io: Server, players: Map<string, any>) {
     this.io = io;
     this.players = players;
   }
 
   public update() {
-    const playerArr = Array.from(this.players.values());
-    
-    // Naive O(N^2) for now. Can be optimized with Spatial Hash Grid for many players.
-    const connections = new Set<string>();
+    try {
+      const playerArr = Array.from(this.players.values());
+      const clusters: Set<string>[] = [];
+      const visited = new Set<string>();
 
-    for (let i = 0; i < playerArr.length; i++) {
-      for (let j = i + 1; j < playerArr.length; j++) {
-        const p1 = playerArr[i];
-        const p2 = playerArr[j];
+      // Simple clustering algorithm to find groups of players within proximity
+      for (const p of playerArr) {
+        if (visited.has(p.id)) continue;
+        
+        const cluster = new Set<string>();
+        const queue = [p.id];
+        visited.add(p.id);
 
-        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+        while (queue.length > 0) {
+          const currentId = queue.shift()!;
+          cluster.add(currentId);
+          const currentP = this.players.get(currentId);
+          if (!currentP) continue;
 
-        if (dist <= PROXIMITY_RADIUS) {
-          // Check line of sight (mock implementation, you can add wall arrays here)
-          const hasLineOfSight = true; // TODO: integrate collision map check
-
-          if (hasLineOfSight) {
-            connections.add(`${p1.id}-${p2.id}`);
-            this.handleProximityMatch(p1.id, p2.id);
+          for (const otherP of playerArr) {
+            if (visited.has(otherP.id)) continue;
+            const dist = Math.hypot(otherP.x - currentP.x, otherP.y - currentP.y);
+            if (dist <= PROXIMITY_RADIUS) {
+              visited.add(otherP.id);
+              queue.push(otherP.id);
+            }
           }
+        }
+
+        if (cluster.size >= 2) {
+          clusters.push(cluster);
+        }
+      }
+
+      // Update rooms based on clusters
+      this.syncRooms(clusters);
+      
+    } catch (err) {
+      console.error('ProximityEngine Update Error:', err);
+    }
+  }
+
+  private syncRooms(newClusters: Set<string>[]) {
+    // 1. Identify which players need to leave their current rooms
+    const currentRoomPlayers = new Set(this.playerToRoom.keys());
+    const newClusterPlayers = new Set<string>();
+    newClusters.forEach(c => c.forEach(id => newClusterPlayers.add(id)));
+
+    // Players who were in a room but are no longer in any cluster
+    for (const pid of currentRoomPlayers) {
+      if (!newClusterPlayers.has(pid)) {
+        this.leaveCurrentRoom(pid);
+      }
+    }
+
+    // 2. Map clusters to existing rooms or create new ones
+    for (const cluster of newClusters) {
+      // Find if any player in this cluster is already in a room
+      let existingRoomId: string | null = null;
+      for (const pid of cluster) {
+        if (this.playerToRoom.has(pid)) {
+          existingRoomId = this.playerToRoom.get(pid)!;
+          break;
+        }
+      }
+
+      if (existingRoomId) {
+        // Update existing room
+        const roomMembers = this.activeRooms.get(existingRoomId)!;
+        
+        // Add new members
+        for (const pid of cluster) {
+          if (!roomMembers.has(pid)) {
+            this.joinRoom(pid, existingRoomId);
+          }
+        }
+        
+        // Remove members who left this cluster but were in this room
+        for (const pid of roomMembers) {
+          if (!cluster.has(pid)) {
+            this.leaveCurrentRoom(pid);
+          }
+        }
+      } else {
+        // Create new room
+        const roomId = `group-${Math.random().toString(36).substring(2, 11)}`;
+        this.activeRooms.set(roomId, new Set());
+        for (const pid of cluster) {
+          this.joinRoom(pid, roomId);
         }
       }
     }
+  }
 
-    // Cleanup old rooms
-    for (const [roomId, members] of this.activeRooms.entries()) {
-      const p1 = Array.from(members)[0];
-      const p2 = Array.from(members)[1];
+  private joinRoom(playerId: string, roomId: string) {
+    const roomMembers = this.activeRooms.get(roomId);
+    const player = this.players.get(playerId);
+    const socket = this.io.sockets.sockets.get(playerId);
+    
+    if (roomMembers && player && socket) {
+      roomMembers.add(playerId);
+      this.playerToRoom.set(playerId, roomId);
+      socket.join(roomId);
+
+      // Tell the player they entered proximity
+      // In group mode, we might want to send the whole list of peers
+      const peers = Array.from(roomMembers)
+        .filter(id => id !== playerId)
+        .map(id => this.players.get(id))
+        .filter(p => p !== undefined);
+
+      socket.emit('proximity_enter', { roomId, peers });
       
-      if (!p1 || !p2 || !this.players.has(p1) || !this.players.has(p2)) {
-        this.destroyRoom(roomId);
-        continue;
-      }
-
-      if (!connections.has(`${p1}-${p2}`) && !connections.has(`${p2}-${p1}`)) {
-        this.destroyRoom(roomId);
-      }
+      // Tell others in the room that a new peer joined
+      socket.to(roomId).emit('peer_joined_room', { peer: player });
+      console.log(`[PROXIMITY] ${player.username} joined room ${roomId}`);
     }
   }
 
-  private handleProximityMatch(id1: string, id2: string) {
-    const p1 = this.players.get(id1);
-    const p2 = this.players.get(id2);
-    if (!p1 || !p2) return;
+  private leaveCurrentRoom(playerId: string) {
+    const roomId = this.playerToRoom.get(playerId);
+    if (!roomId) return;
 
-    // Check if they are already in a room together
-    for (const [roomId, members] of this.activeRooms.entries()) {
-      if (members.has(id1) && members.has(id2)) {
-        return; // Already connected
-      }
-    }
+    const roomMembers = this.activeRooms.get(roomId);
+    const socket = this.io.sockets.sockets.get(playerId);
 
-    // Create a new room
-    const roomId = `room-${Math.random().toString(36).substr(2, 9)}`;
-    const members = new Set([id1, id2]);
-    this.activeRooms.set(roomId, members);
-
-    // Notify players to open chat panel
-    const socket1 = this.io.sockets.sockets.get(id1);
-    const socket2 = this.io.sockets.sockets.get(id2);
-
-    if (socket1 && socket2) {
-      socket1.join(roomId);
-      socket2.join(roomId);
-      
-      socket1.emit('proximity_enter', { roomId, peer: p2 });
-      socket2.emit('proximity_enter', { roomId, peer: p1 });
-    }
-  }
-
-  private destroyRoom(roomId: string) {
-    const members = this.activeRooms.get(roomId);
-    if (!members) return;
-
-    members.forEach(id => {
-      const socket = this.io.sockets.sockets.get(id);
+    if (roomMembers) {
+      roomMembers.delete(playerId);
       if (socket) {
         socket.leave(roomId);
-        socket.emit('proximity_leave', { roomId });
+        socket.emit('proximity_leave');
+        socket.to(roomId).emit('peer_left_room', { playerId });
       }
-    });
+    }
 
-    this.activeRooms.delete(roomId);
+    this.playerToRoom.delete(playerId);
+
+    // If room is empty or only 1 person, destroy it
+    if (!roomMembers || roomMembers.size < 2) {
+      if (roomMembers && roomMembers.size === 1) {
+        const lastPlayerId = Array.from(roomMembers)[0];
+        this.leaveCurrentRoom(lastPlayerId);
+      }
+      this.activeRooms.delete(roomId);
+    }
   }
 
   public removePlayer(playerId: string) {
-    for (const [roomId, members] of this.activeRooms.entries()) {
-      if (members.has(playerId)) {
-        this.destroyRoom(roomId);
-      }
-    }
+    this.leaveCurrentRoom(playerId);
   }
 }
