@@ -32,7 +32,9 @@ export const AuthOverlay: React.FC = () => {
       : { username, password, avatar: selectedAvatar };
     
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const rawBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
+      
       const response = await fetch(`${baseUrl}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
