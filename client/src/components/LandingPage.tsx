@@ -38,7 +38,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* Feature Cards */}
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 px-6 pb-20">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 px-6 pb-32">
         <FeatureCard 
           icon={<Move className="w-6 h-6 text-emerald-500" />}
           title="Dynamic Movement"

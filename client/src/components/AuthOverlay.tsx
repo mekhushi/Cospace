@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
-import { LogIn, UserPlus, Loader2, Check, RefreshCw } from 'lucide-react';
+import { LogIn, UserPlus, Loader2, Check, RefreshCw, X } from 'lucide-react';
 
 const AVATAR_IMAGES = [
   '/avatars/avatar1.png',
@@ -12,7 +12,11 @@ const AVATAR_IMAGES = [
   '/avatars/avatar6.png',
 ];
 
-export const AuthOverlay: React.FC = () => {
+interface AuthOverlayProps {
+  onBack?: () => void;
+}
+
+export const AuthOverlay: React.FC<AuthOverlayProps> = ({ onBack }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -58,12 +62,21 @@ export const AuthOverlay: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md overflow-y-auto py-10">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-xl p-10 bg-[#0A0A0A] border border-white/5 rounded-sm shadow-2xl"
+        className="relative w-full max-w-xl p-10 bg-[#0A0A0A] border border-white/5 rounded-sm shadow-2xl"
       >
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors"
+            title="Back to Home"
+          >
+            <X className="w-5 h-5" /> 
+          </button>
+        )}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-black text-white tracking-tight uppercase">
             <span className="text-emerald-500">Virtual</span>Cosmos

@@ -69,7 +69,7 @@ function App() {
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden text-white">
-      {!user && <AuthOverlay />}
+      {!user && <AuthOverlay onBack={() => setShowLanding(true)} />}
       
       <canvas 
         ref={canvasRef} 
